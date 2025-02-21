@@ -5,7 +5,7 @@ from typing import Any
 import requests
 from jose import jwt
 
-from .config import NefinoConfig
+from config import NefinoConfig
 
 
 class NefinoClient:

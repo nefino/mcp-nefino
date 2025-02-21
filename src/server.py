@@ -1,34 +1,23 @@
 """MCP server implementation for Nefino API integration."""
 
-from contextlib import asynccontextmanager
-from typing import AsyncIterator, List, Optional
+from typing import List, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
 
-from .client import NefinoClient
-from .config import NefinoConfig
-from .validation import validate_date_format, validate_date_range, validate_last_n_days
+from client import NefinoClient
+from config import NefinoConfig
+from enums import NewsTopic, PlaceTypeNews, RangeOrRecency
+from validation import validate_date_format, validate_date_range, validate_last_n_days
 
+# Initialize client at module level
+try:
+    config = NefinoConfig.from_env()
+    client = NefinoClient(config)
+except Exception as e:
+    print(f"Failed to initialize Nefino client: {str(e)}")
+    raise
 
-@asynccontextmanager
-async def server_lifespan(server: FastMCP) -> AsyncIterator[dict]:
-    """Manage server startup and shutdown lifecycle."""
-    try:
-        # Initialize Nefino client on startup
-        config = NefinoConfig.from_env()
-        client = NefinoClient(config)
-        server.info(f"Nefino client initialized with base URL: {config.base_url}")
-        yield {"client": client}
-    except Exception as e:
-        server.error(f"Failed to initialize Nefino client: {str(e)}")
-        raise
-
-
-# Create the MCP server
-mcp = FastMCP(
-    "nefino",
-    lifespan=server_lifespan,
-)
+mcp = FastMCP("nefino")
 
 
 @mcp.tool()
@@ -82,8 +71,6 @@ async def retrieve_news_items_for_place(
             # Clear last_n_days when using range
             last_n_days = None
 
-        client = ctx.request_context.lifespan_context["client"]
-
         # Convert enums to strings for the API
         str_place_type = place_type.value
         str_range_or_recency = range_or_recency.value if range_or_recency else None
@@ -91,7 +78,6 @@ async def retrieve_news_items_for_place(
             [topic.value for topic in news_topics] if news_topics else None
         )
 
-        # Make the API call
         result = client.get_news(
             place_id=place_id,
             place_type=str_place_type,
