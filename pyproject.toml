@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-nefino"
+version = "0.1.0"
+description = "MCP server for accessing Nefino renewable energy news API"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [
+    { name = "David Kort", email = "david.kort@nefino.de" }
+]
+dependencies = [
+    "mcp",
+    "requests",
+    "python-jose",
+    "pydantic",
+    "fastapi",
+]
+
+[project.scripts]
+mcp-nefino = "mcp_nefino.server:mcp.run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_nefino"]
