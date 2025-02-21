@@ -1,29 +1,14 @@
 """MCP server implementation for Nefino API integration."""
+
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Optional, List
-from enum import Enum
+from typing import AsyncIterator, List, Optional
 
-from mcp.server.fastmcp import FastMCP, Context
-from .config import NefinoConfig
+from mcp.server.fastmcp import Context, FastMCP
+
 from .client import NefinoClient
+from .config import NefinoConfig
+from .validation import validate_date_format, validate_date_range, validate_last_n_days
 
-# Enums for validation
-class PlaceTypeNews(str, Enum):
-    PLANNING_REGIONS = "PR"
-    COUNTY = "CTY"
-    ADMINISTRATIVE_UNIT = "AU"
-    LOCAL_ADMINISTRATIVE_UNITS = "LAU"
-
-class RangeOrRecency(str, Enum):
-    RANGE = "RANGE"
-    RECENCY = "RECENCY"
-
-class NewsTopic(str, Enum):
-    BATTERY_STORAGE = "batteryStorage"
-    GRID_EXPANSION = "gridExpansion"
-    SOLAR = "solar"
-    HYDROGEN = "hydrogen"
-    WIND = "wind"
 
 @asynccontextmanager
 async def server_lifespan(server: FastMCP) -> AsyncIterator[dict]:
@@ -38,11 +23,13 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[dict]:
         server.error(f"Failed to initialize Nefino client: {str(e)}")
         raise
 
+
 # Create the MCP server
 mcp = FastMCP(
     "nefino",
     lifespan=server_lifespan,
 )
+
 
 @mcp.tool()
 async def retrieve_news_items_for_place(
@@ -53,7 +40,7 @@ async def retrieve_news_items_for_place(
     last_n_days: Optional[int] = None,
     date_range_begin: Optional[str] = None,
     date_range_end: Optional[str] = None,
-    news_topics: Optional[List[NewsTopic]] = None
+    news_topics: Optional[List[NewsTopic]] = None,
 ) -> str:
     """Fetch news items for a place.
 
@@ -70,12 +57,39 @@ async def retrieve_news_items_for_place(
         JSON string containing the news items
     """
     try:
+        # Validate inputs based on range_or_recency
+        if range_or_recency == RangeOrRecency.RECENCY:
+            valid, error = validate_last_n_days(last_n_days)
+            if not valid:
+                return f"Validation error in RangeOrRecency.RECENCY: {error}"
+
+            # Clear date range parameters when using recency
+            date_range_begin = None
+            date_range_end = None
+
+        elif range_or_recency == RangeOrRecency.RANGE:
+            # Validate date formats
+            if not validate_date_format(date_range_begin) or not validate_date_format(
+                date_range_end
+            ):
+                return "Validation error: Invalid date format. Use YYYY-MM-DD"
+
+            # Validate date range
+            valid, error = validate_date_range(date_range_begin, date_range_end)
+            if not valid:
+                return f"Validation error in RangeOrRecency.RANGE: {error}"
+
+            # Clear last_n_days when using range
+            last_n_days = None
+
         client = ctx.request_context.lifespan_context["client"]
-        
+
         # Convert enums to strings for the API
         str_place_type = place_type.value
         str_range_or_recency = range_or_recency.value if range_or_recency else None
-        str_news_topics = [topic.value for topic in news_topics] if news_topics else None
+        str_news_topics = (
+            [topic.value for topic in news_topics] if news_topics else None
+        )
 
         # Make the API call
         result = client.get_news(
@@ -85,13 +99,14 @@ async def retrieve_news_items_for_place(
             last_n_days=last_n_days,
             date_range_begin=date_range_begin,
             date_range_end=date_range_end,
-            news_topics=str_news_topics
+            news_topics=str_news_topics,
         )
 
         return result
     except Exception as e:
         ctx.error(f"Error retrieving news: {str(e)}")
         return f"Failed to retrieve news: {str(e)}"
+
 
 if __name__ == "__main__":
     mcp.run()
