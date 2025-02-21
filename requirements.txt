@@ -1,5 +1,0 @@
-mcp
-requests
-python-jose
-pydantic
-fastapi
