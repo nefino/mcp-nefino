@@ -21,7 +21,7 @@ mcp = FastMCP("nefino")
 
 
 @mcp.tool()
-def retrieve_news_items_for_place(
+async def retrieve_news_items_for_place(
     ctx: Context,
     place_id: str,
     place_type: PlaceTypeNews,
@@ -78,7 +78,7 @@ def retrieve_news_items_for_place(
             [topic.value for topic in news_topics] if news_topics else None
         )
 
-        result = client.get_news(
+        result = await client.get_news(
             place_id=place_id,
             place_type=str_place_type,
             range_or_recency=str_range_or_recency,
@@ -92,7 +92,3 @@ def retrieve_news_items_for_place(
     except Exception as e:
         ctx.error(f"Error retrieving news: {str(e)}")
         return f"Failed to retrieve news: {str(e)}"
-
-
-if __name__ == "__main__":
-    mcp.run()

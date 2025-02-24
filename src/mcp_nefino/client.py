@@ -1,8 +1,7 @@
 """Nefino API client implementation."""
 
 from typing import Any
-
-import requests
+import aiohttp
 from jose import jwt
 
 from .config import NefinoConfig
@@ -26,7 +25,7 @@ class NefinoClient:
         }
         return jwt.encode(payload, self.jwt_secret, algorithm="HS256")
 
-    def get_news(
+    async def get_news(
         self,
         place_id: str,
         place_type: str,
@@ -56,11 +55,12 @@ class NefinoClient:
         if news_topics:
             payload["news_topics"] = news_topics
 
-        response = requests.post(
-            f"{self.base_url}/get_news", headers=headers, json=payload
-        )
-
-        if response.status_code != 200:
-            raise Exception(f"Error: {response.status_code} - {response.text}")
-
-        return response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/get_news", headers=headers, json=payload
+            ) as response:
+                if response.status != 200:
+                    text = await response.text()
+                    raise Exception(f"Error: {response.status} - {text}")
+                
+                return await response.json()
