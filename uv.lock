@@ -241,7 +241,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi" },
-    { name = "mcp" },
+    { name = "mcp", specifier = ">=1.3.0" },
     { name = "pydantic" },
     { name = "python-jose" },
     { name = "requests" },
