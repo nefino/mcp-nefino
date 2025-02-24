@@ -1,6 +1,6 @@
 [project]
 name = "mcp-nefino"
-version = "0.1.4"
+version = "0.1.5"
 description = "MCP server for accessing Nefino renewable energy news API"
 authors = [{ name = "David Kort", email = "david.kort@nefino.de" }]
 requires-python = ">=3.10"

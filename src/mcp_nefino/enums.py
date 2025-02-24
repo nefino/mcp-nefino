@@ -1,6 +1,6 @@
 """Enums for validation"""
 
-from enum import Enum
+from enum import Enum, auto
 
 
 class PlaceTypeNews(str, Enum):
@@ -21,3 +21,10 @@ class NewsTopic(str, Enum):
     SOLAR = "solar"
     HYDROGEN = "hydrogen"
     WIND = "wind"
+
+
+class TaskStatus(Enum):
+    """Status of an async task."""
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
