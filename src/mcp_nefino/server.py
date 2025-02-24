@@ -1,6 +1,8 @@
 """MCP server implementation for Nefino API integration."""
 
-from typing import List, Optional
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import AsyncIterator, List, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
@@ -10,15 +12,27 @@ from .config import NefinoConfig
 from .enums import NewsTopic, PlaceTypeNews, RangeOrRecency
 from .validation import validate_date_format, validate_date_range, validate_last_n_days
 
-# Initialize client at module level
-try:
-    config = NefinoConfig.from_env()
-    client = NefinoClient(config)
-except Exception as e:
-    print(f"Failed to initialize Nefino client: {str(e)}")
-    raise
 
-mcp = FastMCP("nefino")
+@dataclass
+class AppContext:
+    """Application context holding configuration and client instances."""
+    config: NefinoConfig
+    client: NefinoClient
+
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+    """Initialize and manage the lifecycle of application dependencies."""
+    try:
+        config = NefinoConfig.from_env()
+        client = NefinoClient(config)
+        yield AppContext(config=config, client=client)
+    except Exception as e:
+        print(f"Failed to initialize Nefino client: {str(e)}")
+        raise
+
+
+mcp = FastMCP("nefino", lifespan=app_lifespan)
 
 
 @mcp.tool(name="GetNews", description="Useful if you need to retrieve news items for a place")
@@ -37,32 +51,30 @@ async def retrieve_news_items_for_place(
         data="Running GetNews tool",
     )
     try:
+        # Get client from context
+        client = ctx.request_context.lifespan_context.client
+
         # Validate inputs based on range_or_recency
         if range_or_recency == RangeOrRecency.RECENCY:
             valid, error = validate_last_n_days(last_n_days)
             if not valid:
                 return f"Validation error in RangeOrRecency.RECENCY: {error}"
 
-            # Clear date range parameters when using recency
             date_range_begin = None
             date_range_end = None
 
         elif range_or_recency == RangeOrRecency.RANGE:
-            # Validate date formats
             if not validate_date_format(date_range_begin) or not validate_date_format(
                 date_range_end
             ):
                 return "Validation error: Invalid date format. Use YYYY-MM-DD"
 
-            # Validate date range
             valid, error = validate_date_range(date_range_begin, date_range_end)
             if not valid:
                 return f"Validation error in RangeOrRecency.RANGE: {error}"
 
-            # Clear last_n_days when using range
             last_n_days = None
 
-        # Convert enums to strings for the API
         str_place_type = place_type.value
         str_range_or_recency = range_or_recency.value if range_or_recency else None
         str_news_topics = (
