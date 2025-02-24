@@ -3,6 +3,7 @@
 from typing import List, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import Field
 
 from .client import NefinoClient
 from .config import NefinoConfig
@@ -20,31 +21,21 @@ except Exception as e:
 mcp = FastMCP("nefino")
 
 
-@mcp.tool()
+@mcp.tool(name="GetNews", description="Useful if you need to retrieve news items for a place")
 async def retrieve_news_items_for_place(
     ctx: Context,
-    place_id: str,
-    place_type: PlaceTypeNews,
-    range_or_recency: Optional[RangeOrRecency] = None,
-    last_n_days: Optional[int] = None,
-    date_range_begin: Optional[str] = None,
-    date_range_end: Optional[str] = None,
-    news_topics: Optional[List[NewsTopic]] = None,
+    place_id: str = Field(description="The id of the place"),
+    place_type: PlaceTypeNews = Field(description="The type of the place (PR, CTY, AU, LAU)"),
+    range_or_recency: RangeOrRecency | None = Field(description="Type of search (RANGE or RECENCY)", default=None),
+    last_n_days: int | None = Field(description="Number of days to search for (when range_or_recency=RECENCY)", default=None),
+    date_range_begin: str | None = Field(description="Start date in YYYY-MM-DD format (when range_or_recency=RANGE)", default=None),
+    date_range_end: str | None = Field(description="End date in YYYY-MM-DD format (when range_or_recency=RANGE)", default=None),
+    news_topics: List[NewsTopic] | None = Field(description="List of topics to filter by (batteryStorage, gridExpansion, solar, hydrogen, wind)", default=None),
 ) -> str:
-    """Fetch news items for a place.
-
-    Args:
-        place_id: The id of the place
-        place_type: The type of the place (PR, CTY, AU, LAU)
-        range_or_recency: Type of search (RANGE or RECENCY)
-        last_n_days: Number of days to search for (when range_or_recency=RECENCY)
-        date_range_begin: Start date in YYYY-MM-DD format (when range_or_recency=RANGE)
-        date_range_end: End date in YYYY-MM-DD format (when range_or_recency=RANGE)
-        news_topics: List of topics to filter by (batteryStorage, gridExpansion, solar, hydrogen, wind)
-
-    Returns:
-        JSON string containing the news items
-    """
+    ctx.session.send_log_message(
+        level="info",
+        data="Running GetNews tool",
+    )
     try:
         # Validate inputs based on range_or_recency
         if range_or_recency == RangeOrRecency.RECENCY:
@@ -87,6 +78,10 @@ async def retrieve_news_items_for_place(
             date_range_end=date_range_end,
             news_topics=str_news_topics,
         )
+        ctx.session.send_log_message(
+            level="info",
+            data="News items retrieved successfully",
+        )   
 
         return result
     except Exception as e:
