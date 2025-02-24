@@ -1,8 +1,9 @@
 """MCP server implementation for Nefino API integration."""
 
+import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import AsyncIterator, List, Optional
+from typing import AsyncIterator
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
@@ -16,6 +17,7 @@ from .validation import validate_date_format, validate_date_range, validate_last
 @dataclass
 class AppContext:
     """Application context holding configuration and client instances."""
+
     config: NefinoConfig
     client: NefinoClient
 
@@ -35,22 +37,45 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 mcp = FastMCP("nefino", lifespan=app_lifespan)
 
 
-@mcp.tool(name="GetNews", description="Useful if you need to retrieve news items for a place")
+@mcp.tool(
+    name="GetNews", description="Useful if you need to retrieve news items for a place"
+)
 async def retrieve_news_items_for_place(
     ctx: Context,
     place_id: str = Field(description="The id of the place"),
-    place_type: PlaceTypeNews = Field(description="The type of the place (PR, CTY, AU, LAU)"),
-    range_or_recency: RangeOrRecency | None = Field(description="Type of search (RANGE or RECENCY)", default=None),
-    last_n_days: int | None = Field(description="Number of days to search for (when range_or_recency=RECENCY)", default=None),
-    date_range_begin: str | None = Field(description="Start date in YYYY-MM-DD format (when range_or_recency=RANGE)", default=None),
-    date_range_end: str | None = Field(description="End date in YYYY-MM-DD format (when range_or_recency=RANGE)", default=None),
-    news_topics: List[NewsTopic] | None = Field(description="List of topics to filter by (batteryStorage, gridExpansion, solar, hydrogen, wind)", default=None),
+    place_type: PlaceTypeNews = Field(
+        description="The type of the place (PR, CTY, AU, LAU)"
+    ),
+    range_or_recency: RangeOrRecency | None = Field(
+        description="Type of search (RANGE or RECENCY)", default=None
+    ),
+    last_n_days: int | None = Field(
+        description="Number of days to search for (when range_or_recency=RECENCY)",
+        default=None,
+    ),
+    date_range_begin: str | None = Field(
+        description="Start date in YYYY-MM-DD format (when range_or_recency=RANGE)",
+        default=None,
+    ),
+    date_range_end: str | None = Field(
+        description="End date in YYYY-MM-DD format (when range_or_recency=RANGE)",
+        default=None,
+    ),
+    news_topics: list[NewsTopic] | None = Field(
+        description="List of topics to filter by (batteryStorage, gridExpansion, solar, hydrogen, wind)",
+        default=None,
+    ),
 ) -> str:
     ctx.session.send_log_message(
         level="info",
-        data="Running GetNews tool",
+        data="Starting GetNews tool execution",
     )
     try:
+        ctx.session.send_log_message(
+            level="info",
+            data=f"Parameters: place_id={place_id}, place_type={place_type}",
+        )
+
         # Get client from context
         client = ctx.request_context.lifespan_context.client
 
@@ -93,9 +118,13 @@ async def retrieve_news_items_for_place(
         ctx.session.send_log_message(
             level="info",
             data="News items retrieved successfully",
-        )   
+        )
 
-        return result
+        return json.dumps(result) if isinstance(result, dict) else str(result)
     except Exception as e:
+        ctx.session.send_log_message(
+            level="error",
+            data=f"Error in GetNews tool: {str(e)}",
+        )
         ctx.error(f"Error retrieving news: {str(e)}")
         return f"Failed to retrieve news: {str(e)}"
