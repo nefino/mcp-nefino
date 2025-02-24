@@ -20,6 +20,7 @@ except Exception as e:
 mcp = FastMCP("nefino")
 
 
+# Testing prompt
 @mcp.prompt()
 async def read_news() -> list[str | None]:
     return [{"role": "user", "content": "some news"}]
