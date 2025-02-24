@@ -66,12 +66,12 @@ async def retrieve_news_items_for_place(
         default=None,
     ),
 ) -> str:
-    ctx.session.send_log_message(
+    await ctx.session.send_log_message(
         level="info",
         data="Starting GetNews tool execution",
     )
     try:
-        ctx.session.send_log_message(
+        await ctx.session.send_log_message(
             level="info",
             data=f"Parameters: place_id={place_id}, place_type={place_type}",
         )
@@ -115,14 +115,14 @@ async def retrieve_news_items_for_place(
             date_range_end=date_range_end,
             news_topics=str_news_topics,
         )
-        ctx.session.send_log_message(
+        await ctx.session.send_log_message(
             level="info",
             data="News items retrieved successfully",
         )
 
         return json.dumps(result) if isinstance(result, dict) else str(result)
     except Exception as e:
-        ctx.session.send_log_message(
+        await ctx.session.send_log_message(
             level="error",
             data=f"Error in GetNews tool: {str(e)}",
         )
