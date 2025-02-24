@@ -22,7 +22,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv]
-package = false
+package = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_nefino"]

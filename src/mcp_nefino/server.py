@@ -4,10 +4,10 @@ from typing import List, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
 
-from client import NefinoClient
-from config import NefinoConfig
-from enums import NewsTopic, PlaceTypeNews, RangeOrRecency
-from validation import validate_date_format, validate_date_range, validate_last_n_days
+from .client import NefinoClient
+from .config import NefinoConfig
+from .enums import NewsTopic, PlaceTypeNews, RangeOrRecency
+from .validation import validate_date_format, validate_date_range, validate_last_n_days
 
 # Initialize client at module level
 try:

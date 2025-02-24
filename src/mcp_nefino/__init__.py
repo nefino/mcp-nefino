@@ -1,3 +1,7 @@
-"""MCP server for accessing Nefino renewable energy news API."""
+"""Nefino MCP package."""
+
+from .server import mcp
+
+__all__ = ["mcp"]
 
 __version__ = "0.1.0"
